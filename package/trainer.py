@@ -34,7 +34,7 @@ class TrainConfig:
     batch_size: int = 32  # размер батча из буфера
     total_frames_steps: int = 200_000_000 // frames_per_batch  # всего кадров среды за прогон
     updates_per_batch: int = 1  # градиентных шагов на один собранный батч
-    min_buffer_steps: int = 80_000 // frames_per_batch  # прогрев: не учимся, пока в буфере меньше переходов
+    min_buffer_size: int = 80_000  # прогрев: не учимся, пока в буфере меньше переходов
     # --- буфер / n-step / PER ---
     buffer_size: int = 250_000 * 4  # ёмкость реплей-буфера
     n_steps: int = 3  # горизонт multi-step возврата
@@ -151,8 +151,7 @@ class Trainer:
                 self._track_returns(to_transition(td))
                 self.buffer.sampler.beta = self.annealed_beta()
                 # ----------------------------------------
-                print(len(self.buffer), cfg.min_buffer_steps * cfg.frames_per_batch)
-                if len(self.buffer) < (cfg.min_buffer_steps * cfg.frames_per_batch): continue
+                if len(self.buffer) < cfg.min_buffer_size: continue
                 # ----------------------------------------
                 if progress_bar.desc == "Filling the buffer...":
                     progress_bar.set_description("Makes gradient descent steps...")
