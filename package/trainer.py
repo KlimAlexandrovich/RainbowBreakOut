@@ -137,8 +137,7 @@ class Trainer:
     @except_keyboard_interrupt()
     def run(self) -> None:
         cfg: TrainConfig = self.cfg
-        sys.stderr.write("Training...")
-        sys.stderr.flush()
+        sys.stderr.write("Training. Filling buffer step..."), sys.stderr.flush()
         for it, td in enumerate(self.collector, start=1):
             # ----------------------------------------
             reset_noise(self.dqn)
@@ -147,7 +146,12 @@ class Trainer:
             self._track_returns(to_transition(td))
             self.buffer.sampler.beta = self.annealed_beta()
             # ----------------------------------------
-            if len(self.buffer) < cfg.min_buffer_size: continue
+            if len(self.buffer) < cfg.min_buffer_size:
+                if (it % cfg.show_interval) == 0:
+                    log_string = (f"Iteration: {it}/{len(self.collector)}; "
+                                  f"Buffer len: {len(self.buffer)}.\n")
+                    sys.stderr.write(log_string), sys.stderr.flush()
+                continue
             # ----------------------------------------
             cum_loss: float | int = 0
             for _ in range(cfg.updates_per_batch):
@@ -160,13 +164,13 @@ class Trainer:
             if ((it % cfg.log_interval) == 0) and (self.logger is not None):
                 mean_loss: int | float = cum_loss / cfg.updates_per_batch
                 self.logger_step(mean_loss)
+            # ----------------------------------------
             if (it % cfg.show_interval) == 0:
                 mean_loss: int | float = cum_loss / cfg.updates_per_batch
                 log_string = (f"Iteration: {it}/{len(self.collector)}; "
                               f"Loss: {mean_loss:.4f}; "
                               f"Avg. return: {self.mean_reward(default=0.):.2f};"
                               f"Collected frames: {self.collected}; "
-                              f"Buffer len: {len(self.buffer)}.")
-                sys.stderr.write(log_string)
-                sys.stderr.flush()
+                              f"Buffer len: {len(self.buffer)}.\n")
+                sys.stderr.write(log_string), sys.stderr.flush()
         self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
