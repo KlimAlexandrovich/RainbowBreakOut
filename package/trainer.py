@@ -1,4 +1,4 @@
-from tqdm.auto import tqdm
+import sys
 from collections import deque
 from dataclasses import dataclass
 
@@ -137,6 +137,8 @@ class Trainer:
     @except_keyboard_interrupt()
     def run(self) -> None:
         cfg: TrainConfig = self.cfg
+        sys.stderr.write("Training...")
+        sys.stderr.flush()
         for it, td in enumerate(self.collector, start=1):
             # ----------------------------------------
             reset_noise(self.dqn)
@@ -160,9 +162,11 @@ class Trainer:
                 self.logger_step(mean_loss)
             if (it % cfg.show_interval) == 0:
                 mean_loss: int | float = cum_loss / cfg.updates_per_batch
-                print(f"Iteration: {it}/{len(self.collector)}; "
-                      f"Loss: {mean_loss:.4f}; "
-                      f"Avg. return: {self.mean_reward(default=0.):.2f};"
-                      f"Collected frames: {self.collected}; "
-                      f"Buffer len: {len(self.buffer)}.", flush=True)
+                log_string = (f"Iteration: {it}/{len(self.collector)}; "
+                              f"Loss: {mean_loss:.4f}; "
+                              f"Avg. return: {self.mean_reward(default=0.):.2f};"
+                              f"Collected frames: {self.collected}; "
+                              f"Buffer len: {len(self.buffer)}.")
+                sys.stderr.write(log_string)
+                sys.stderr.flush()
         self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
