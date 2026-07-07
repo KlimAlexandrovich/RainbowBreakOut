@@ -151,7 +151,8 @@ class Trainer:
                 self._track_returns(to_transition(td))
                 self.buffer.sampler.beta = self.annealed_beta()
                 # ----------------------------------------
-                if len(self.buffer) < cfg.min_buffer_steps: continue
+                print(len(self.buffer), cfg.min_buffer_steps * cfg.frames_per_batch)
+                if len(self.buffer) < (cfg.min_buffer_steps * cfg.frames_per_batch): continue
                 # ----------------------------------------
                 if progress_bar.desc == "Filling the buffer...":
                     progress_bar.set_description("Makes gradient descent steps...")
@@ -168,7 +169,5 @@ class Trainer:
                     mean_loss: int | float = cum_loss / cfg.updates_per_batch
                     with plot_output:
                         self.logger_step(mean_loss)
-                    progress_bar.container = progress_bar.status_printer
-                    progress_bar.display()
             self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
             progress_bar.set_description(f"Model saved -> {self.logger.get_last_update(self.dqn.__class__.__name__)}")
