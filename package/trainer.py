@@ -30,22 +30,23 @@ def resolve_device() -> torch.device:
 @dataclass
 class TrainConfig:
     # --- Цикл обучения ---
-    frames_per_batch: int = 32  # Оригинальный 4. Сколько кадров собираем за одну итерацию.
+    frames_per_batch: int = 32  # Оригинальный 4. Сколько шагов среды собираем за одну итерацию.
     batch_size: int = 256  # Размер батча из буфера.
-    total_frames_steps: int = 200_000_000 // frames_per_batch  # Всего шагов среды (всего кадров / кадров на итерацию).
+    action_repeat: int = 4  # = frame_skip в AtariPreprocessing; перевод кадры эмулятора -> шаги среды.
+    total_frames_steps: int = 200_000_000 // action_repeat  # 50M шагов среды = 200M кадров эмулятора.
     updates_per_batch: int = 1  # Градиентных шагов на один собранный батч.
     min_buffer_size: int = 80_000  # Прогрев: не учимся, пока в буфере меньше переходов.
     # --- Буфер / N-step / PER ---
-    buffer_size: int = 250_000  # Ёмкость реплей-буфера.
+    buffer_size: int = 2 * 250_000  # Ёмкость реплей-буфера (x * ≈ 14 ГБ).
     n_steps: int = 3  # Горизонт multi-step возврата.
     gamma: float | int = 0.99  # Ставка дисконтирования.
     alpha: float | int = 0.5  # Приоритизация PER.
     beta: float | int = 0.4  # Importance-sampling PER: стартовое значение β₀.
-    beta_end: float | int = 1.0  # β линейно уменьшается β₀ -> beta_end к концу обучения (как в Rainbow)
+    beta_end: float | int = 1.0  # β линейно растёт β₀ -> beta_end к концу обучения (как в Rainbow)
     # --- Оптимизатор / Target ---
-    lr: float | int = 1.76e-4,  # SQRT-масштабирования, до этого оригинальный 6.25e-5.
+    lr: float | int = 1.76e-4  # SQRT-масштабирование под batch=256 (6.25e-5 * sqrt(256/32) ≈ 1.76e-4).
     eps: float | int = 1.5e-4
-    target_period: int = int((32000 / 4 / frames_per_batch) * updates_per_batch)
+    target_period: int = int((32000 / action_repeat / frames_per_batch) * updates_per_batch)
     grad_norm: float | int = 10.0  # Максимум нормы градиента.
     # --- Распределение / Архитектура ---
     n_actions: int = 4  # Число действий среды.
@@ -114,11 +115,11 @@ class Trainer:
         else:
             print("Weights initialized.")
 
-    def buffer_step(self, step: int, td: TensorDict) -> None:
+    def buffer_step(self, td: TensorDict) -> None:
         reset_noise(self.dqn)
         self.buffer.extend(to_transition(td).td)
         self.track_returns_step(td)
-        self.buffer.sampler.beta = self.beta_scheduler(step)
+        self.buffer.sampler.beta = self.beta_scheduler(self.reward_window.collected)
 
     def track_returns_step(self, td: TensorDict) -> None:
         transition: Transition = to_transition(td)
@@ -152,7 +153,7 @@ class Trainer:
         sys.stderr.flush()
         for step, td in enumerate(self.collector, start=1):
             # ----------------------------------------
-            self.buffer_step(step=step, td=td)
+            self.buffer_step(td=td)
             # ----------------------------------------
             if len(self.buffer) < self.cfg.min_buffer_size:
                 if (step % self.cfg.show_interval) == 0:
