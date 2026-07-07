@@ -33,7 +33,7 @@ class TrainConfig:
     frames_per_batch: int = 32  # Оригинальный 4. Сколько шагов среды собираем за одну итерацию.
     batch_size: int = 256  # Размер батча из буфера.
     action_repeat: int = 4  # = frame_skip в AtariPreprocessing; перевод кадры эмулятора -> шаги среды.
-    total_frames_steps: int = 200_000_000 // action_repeat  # 50M шагов среды = 200M кадров эмулятора.
+    total_frames_steps: int = 50_000_000 // action_repeat  # 12.5M шагов среды = 50M кадров эмулятора.
     updates_per_batch: int = 1  # Градиентных шагов на один собранный батч.
     min_buffer_size: int = 80_000  # Прогрев: не учимся, пока в буфере меньше переходов.
     # --- Буфер / N-step / PER ---
@@ -157,7 +157,7 @@ class Trainer:
             # ----------------------------------------
             if len(self.buffer) < self.cfg.min_buffer_size:
                 if (step % self.cfg.show_interval) == 0:
-                    log_string: str = f"Iteration: {step}/{len(self.collector)}; Buffer len: {len(self.buffer)}."
+                    log_string: str = f"Iteration: {step}/{len(self.collector)}; Buffer len: {len(self.buffer)}.\n"
                     sys.stderr.write(log_string), sys.stderr.flush()
                 continue
             # ----------------------------------------
@@ -170,7 +170,7 @@ class Trainer:
                               f"Loss: {mean_loss:.4f}; "
                               f"Avg. return: {self.reward_window.mean_reward:.2f};"
                               f"Collected frames: {self.reward_window.collected}; "
-                              f"Buffer len: {len(self.buffer)}.")
+                              f"Buffer len: {len(self.buffer)}.\n")
                 sys.stderr.write(log_string)
                 sys.stderr.flush()
         self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
