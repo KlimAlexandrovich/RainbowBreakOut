@@ -8,7 +8,8 @@ from torchrl.envs.transforms.rb_transforms import MultiStepTransform
 from torchrl.data.replay_buffers import TensorDictReplayBuffer, LazyMemmapStorage
 from torchrl.data.replay_buffers.samplers import PrioritizedSampler
 from functools import wraps
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Any, Deque
+from collections import deque
 
 
 def build_buffer(size: int,
@@ -76,3 +77,60 @@ def get_last_update(directory: str) -> Optional[str]:
     # Return the newest file.
     last: str = max(files, key=os.path.getmtime)
     return last
+
+
+def build_linear_scheduler(start: float | int, end: float | int, total_steps: int) -> Callable[[int], float | int]:
+    delta: int | float = end - start
+
+    def schedule(step: int) -> float | int:
+        fraction: int | float = min(1.0, step / total_steps)
+        return start + fraction * delta
+
+    return schedule
+
+
+class RewardDeque:
+    def __init__(self, window_size: int = 100, default: int | float = 0.0) -> None:
+        self.reward_window: Deque[int | float] = deque(maxlen=window_size)
+        self.episode_return: int | float = 0.0
+        self.collected: int = 0
+        self.default: int | float = default
+
+    def add_frames(self, n: int) -> None:
+        self.collected += n
+
+    def step(self, reward: int | float, done: bool) -> None:
+        self.episode_return += reward
+        if done:
+            self.reward_window.append(self.episode_return)
+            self.episode_return = 0.0
+
+    def update_batch(self, rewards: list[float | int], dones: list[bool]) -> None:
+        for reward, done in zip(rewards, dones):
+            self.step(float(reward), bool(done))
+
+    @property
+    def mean_reward(self) -> int | float:
+        if len(self.reward_window) == 0:
+            return self.default
+        return sum(self.reward_window) / len(self.reward_window)
+
+    def last_reward(self) -> int | float:
+        if len(self.reward_window) == 0:
+            return self.default
+        return self.reward_window[-1]
+
+    def reset(self) -> None:
+        self.reward_window.clear()
+        self.episode_return = 0.0
+        self.collected = 0
+
+    def __len__(self) -> int:
+        return len(self.reward_window)
+
+    def __repr__(self) -> str:
+        return (f"WindowDeque("
+                f"episodes={len(self.reward_window)}, "
+                f"mean_reward={self.mean_reward:.2f}, "
+                f"collected={self.collected}"
+                f")")

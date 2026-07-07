@@ -10,7 +10,6 @@ from torchrl.envs.transforms import InitTracker, TransformedEnv
 
 
 class FireResetEnv(gym.Wrapper):
-
     def __init__(self, env: gym.Env):
         super().__init__(env)
         if hasattr(env.unwrapped, "get_action_meanings"):
