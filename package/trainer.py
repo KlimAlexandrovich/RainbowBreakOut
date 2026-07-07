@@ -136,7 +136,13 @@ class Trainer:
     @except_keyboard_interrupt()
     def run(self) -> None:
         cfg: TrainConfig = self.cfg
-        with tqdm(iterable=self.collector, total=len(self.collector), desc="Filling the buffer...") as progress_bar:
+        with tqdm(
+                iterable=self.collector,
+                total=len(self.collector),
+                desc="Filling the buffer...",
+                mininterval=10.,
+                ncols=100
+        ) as progress_bar:
             for it, td in enumerate(progress_bar, start=1):
                 # ----------------------------------------
                 progress_bar.set_description("Filling the buffer...")
@@ -165,5 +171,6 @@ class Trainer:
                 if ((it % cfg.log_interval) == 0) and (self.logger is not None):
                     progress_bar.set_description(f"Makes logger step...")
                     self.logger_step(mean_loss)
+                    progress_bar.refresh()
             self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
             progress_bar.set_description(f"Model saved -> {self.logger.get_last_update(self.dqn.__class__.__name__)}")
