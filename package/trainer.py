@@ -164,5 +164,5 @@ class Trainer:
                       f"Loss: {mean_loss:.4f}; "
                       f"Avg. return: {self.mean_reward(default=0.):.2f};"
                       f"Collected frames: {self.collected}; "
-                      f"Buffer len: {len(self.buffer)}.")
+                      f"Buffer len: {len(self.buffer)}.", flush=True)
         self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
