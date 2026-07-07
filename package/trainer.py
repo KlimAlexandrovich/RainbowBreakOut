@@ -37,7 +37,7 @@ class TrainConfig:
     updates_per_batch: int = 1  # Градиентных шагов на один собранный батч.
     min_buffer_size: int = 80_000  # Прогрев: не учимся, пока в буфере меньше переходов.
     # --- Буфер / N-step / PER ---
-    buffer_size: int = 2 * 250_000  # Ёмкость реплей-буфера (x * ≈ 14 ГБ).
+    buffer_size: int = int(1.5 * 250_000)  # Ёмкость реплей-буфера (x * ≈ 14 ГБ).
     n_steps: int = 3  # Горизонт multi-step возврата.
     gamma: float | int = 0.99  # Ставка дисконтирования.
     alpha: float | int = 0.5  # Приоритизация PER.
@@ -54,8 +54,8 @@ class TrainConfig:
     v_min: float | int = -10.0
     v_max: float | int = +10.0
     # --- Ввод-вывод ---
-    buffer_dir: str = "staff/buffer"
-    log_dir: str = "staff/logs"
+    buffer_dir: str = "/tmp/staff/buffer"
+    log_dir: str = "/kaggle/working/staff/logs"
     log_interval: int = 20_000  # Сохранять статистику и веса раз в N итераций.
     show_interval: int = 100  # Печатать статистику раз в N итераций.
     # --- Устройство (None -> авто: cuda/mps/cpu) ---

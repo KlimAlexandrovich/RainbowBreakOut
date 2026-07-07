@@ -146,8 +146,8 @@ class DQNOptimizer:
         self.grad_norm: int | float = grad_norm
 
     def step(self, sample: Transition) -> tuple[torch.Tensor, torch.Tensor]:
-        # Свежий шум для online и target один раз перед лоссом (внутри лосса online
-        # прогоняется дважды — ресет там сломал бы граф in-place операцией).
+        # Свежий шум для online и target один раз перед лоссом
+        # (внутри лосса online прогоняется дважды — ресет там сломал бы граф in-place операцией).
         reset_noise(self.loss_function.online)
         reset_noise(self.loss_function.target)
         self.optimizer.zero_grad(set_to_none=True)
