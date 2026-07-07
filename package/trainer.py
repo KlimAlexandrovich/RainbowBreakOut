@@ -1,4 +1,4 @@
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from collections import deque
 from dataclasses import dataclass
 
@@ -137,30 +137,30 @@ class Trainer:
     @except_keyboard_interrupt()
     def run(self) -> None:
         cfg: TrainConfig = self.cfg
-        progress_bar: tqdm = tqdm(iterable=self.collector, total=len(self.collector))
-        for it, td in enumerate(progress_bar, start=1):
-            # ----------------------------------------
-            progress_bar.set_description(f"Filling the buffer...")
-            reset_noise(self.dqn)
-            self.buffer.extend(to_transition(td).td)
-            self.collected += td.numel()
-            self._track_returns(to_transition(td))
-            self.buffer.sampler.beta = self.annealed_beta()
-            # ----------------------------------------
-            if len(self.buffer) < cfg.min_buffer_steps: continue
-            # ----------------------------------------
-            progress_bar.set_description(f"Makes gradient descent steps...")
-            cum_loss: float | int = 0
-            for _ in range(cfg.updates_per_batch):
+        with tqdm(iterable=self.collector, total=len(self.collector)) as progress_bar:
+            for it, td in enumerate(progress_bar, start=1):
+                # ----------------------------------------
+                progress_bar.set_description(f"Filling the buffer...")
                 reset_noise(self.dqn)
-                sample: Transition = to_transition(self.buffer.sample(cfg.batch_size))
-                loss, td_errors = self.optim.step(sample)
-                self.buffer.update_priority(sample.raw.index, td_errors)
-                cum_loss += loss.item()
-            # ----------------------------------------
-            if ((it % cfg.log_interval) == 0) and (self.logger is not None):
-                progress_bar.set_description(f"Makes logger step...")
-                mean_loss: int | float = cum_loss / cfg.updates_per_batch
-                self.logger_step(mean_loss)
-        self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
-        progress_bar.set_description(f"Model saved -> {self.logger.get_last_update(self.dqn.__class__.__name__)}")
+                self.buffer.extend(to_transition(td).td)
+                self.collected += td.numel()
+                self._track_returns(to_transition(td))
+                self.buffer.sampler.beta = self.annealed_beta()
+                # ----------------------------------------
+                if len(self.buffer) < cfg.min_buffer_steps: continue
+                # ----------------------------------------
+                progress_bar.set_description(f"Makes gradient descent steps...")
+                cum_loss: float | int = 0
+                for _ in range(cfg.updates_per_batch):
+                    reset_noise(self.dqn)
+                    sample: Transition = to_transition(self.buffer.sample(cfg.batch_size))
+                    loss, td_errors = self.optim.step(sample)
+                    self.buffer.update_priority(sample.raw.index, td_errors)
+                    cum_loss += loss.item()
+                # ----------------------------------------
+                if ((it % cfg.log_interval) == 0) and (self.logger is not None):
+                    progress_bar.set_description(f"Makes logger step...")
+                    mean_loss: int | float = cum_loss / cfg.updates_per_batch
+                    self.logger_step(mean_loss)
+            self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
+            progress_bar.set_description(f"Model saved -> {self.logger.get_last_update(self.dqn.__class__.__name__)}")

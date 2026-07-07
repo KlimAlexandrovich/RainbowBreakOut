@@ -1,0 +1,10 @@
+gymnasium
+ale-py
+hoptorch
+tensordict
+torchrl
+torchmetrics
+moviepy
+imageio-ffmpeg
+opencv-python
+python-dotenv
