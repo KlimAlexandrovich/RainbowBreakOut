@@ -144,7 +144,6 @@ class Trainer:
         with tqdm(iterable=self.collector, total=len(self.collector), desc="Filling the buffer...") as progress_bar:
             for it, td in enumerate(progress_bar, start=1):
                 # ----------------------------------------
-                progress_bar.set_description("Filling the buffer...")
                 reset_noise(self.dqn)
                 self.buffer.extend(to_transition(td).td)
                 self.collected += td.numel()
@@ -168,5 +167,6 @@ class Trainer:
                     mean_loss: int | float = cum_loss / cfg.updates_per_batch
                     with plot_output:
                         self.logger_step(mean_loss)
+                    progress_bar.set_description("Makes gradient descent steps...")
             self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
             progress_bar.set_description(f"Model saved -> {self.logger.get_last_update(self.dqn.__class__.__name__)}")
