@@ -5,6 +5,7 @@ import csv
 import pandas as pd
 from typing import Optional
 import matplotlib.pyplot as plt
+from IPython.display import clear_output
 from utils import get_last_update
 
 
@@ -62,6 +63,7 @@ class SmartLogger:
         if len(csv_files) == 0:
             print("No CSV files found.")
         else:
+            clear_output(wait=True)
             n_files: int = len(csv_files)
             fig, axes = plt.subplots(n_files, 1, figsize=(5, 4 * n_files), sharex=False)
             axes = [axes] if (n_files == 1) else axes
