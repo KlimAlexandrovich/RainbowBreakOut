@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python -c \"import nbconvert, nbclient; print\\('ok', nbconvert.__version__\\)\")",
+      "Bash(.venv/bin/python -c ' *)"
+    ]
+  }
+}
