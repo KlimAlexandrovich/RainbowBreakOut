@@ -1,6 +1,4 @@
 from tqdm.auto import tqdm
-from ipywidgets import Output
-from IPython.display import display
 from collections import deque
 from dataclasses import dataclass
 
@@ -134,16 +132,14 @@ class Trainer:
                                 collected_frames=self.collected,
                                 buffer_len=len(self.buffer))
         self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
-        self.logger.draw_scalars()
 
     @except_keyboard_interrupt()
     def run(self) -> None:
         cfg: TrainConfig = self.cfg
-        plot_output = Output()
-        display(plot_output)
         with tqdm(iterable=self.collector, total=len(self.collector), desc="Filling the buffer...") as progress_bar:
             for it, td in enumerate(progress_bar, start=1):
                 # ----------------------------------------
+                progress_bar.set_description("Filling the buffer...")
                 reset_noise(self.dqn)
                 self.buffer.extend(to_transition(td).td)
                 self.collected += td.numel()
@@ -152,8 +148,7 @@ class Trainer:
                 # ----------------------------------------
                 if len(self.buffer) < cfg.min_buffer_size: continue
                 # ----------------------------------------
-                if progress_bar.desc == "Filling the buffer...":
-                    progress_bar.set_description("Makes gradient descent steps...")
+                progress_bar.set_description("Makes gradient descent steps...")
                 cum_loss: float | int = 0
                 for _ in range(cfg.updates_per_batch):
                     reset_noise(self.dqn)
@@ -162,11 +157,13 @@ class Trainer:
                     self.buffer.update_priority(sample.raw.index, td_errors)
                     cum_loss += loss.item()
                 # ----------------------------------------
+                mean_loss: int | float = cum_loss / cfg.updates_per_batch
+                progress_bar.set_postfix(mean_loss=mean_loss,
+                                         avg_return=self.mean_reward(default=0.),
+                                         collected_frames=self.collected,
+                                         buffer_len=len(self.buffer))
                 if ((it % cfg.log_interval) == 0) and (self.logger is not None):
                     progress_bar.set_description(f"Makes logger step...")
-                    mean_loss: int | float = cum_loss / cfg.updates_per_batch
-                    with plot_output:
-                        self.logger_step(mean_loss)
-                    progress_bar.set_description("Makes gradient descent steps...")
+                    self.logger_step(mean_loss)
             self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
             progress_bar.set_description(f"Model saved -> {self.logger.get_last_update(self.dqn.__class__.__name__)}")
