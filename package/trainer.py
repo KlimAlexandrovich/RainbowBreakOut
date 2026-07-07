@@ -138,6 +138,7 @@ class Trainer:
     def run(self) -> None:
         cfg: TrainConfig = self.cfg
         with tqdm(iterable=self.collector, total=len(self.collector)) as progress_bar:
+            progress_bar.set_description("Filling the buffer...")
             for it, td in enumerate(progress_bar, start=1):
                 # ----------------------------------------
                 progress_bar.set_description(f"Filling the buffer...")
@@ -149,7 +150,8 @@ class Trainer:
                 # ----------------------------------------
                 if len(self.buffer) < cfg.min_buffer_steps: continue
                 # ----------------------------------------
-                progress_bar.set_description(f"Makes gradient descent steps...")
+                if progress_bar.desc == "Filling the buffer...":
+                    progress_bar.set_description("Makes gradient descent steps...")
                 cum_loss: float | int = 0
                 for _ in range(cfg.updates_per_batch):
                     reset_noise(self.dqn)
@@ -162,5 +164,7 @@ class Trainer:
                     progress_bar.set_description(f"Makes logger step...")
                     mean_loss: int | float = cum_loss / cfg.updates_per_batch
                     self.logger_step(mean_loss)
+                    progress_bar.container = progress_bar.status_printer
+                    progress_bar.display()
             self.logger.checkpoint(weights=self.dqn.state_dict(), model=self.dqn.__class__.__name__)
             progress_bar.set_description(f"Model saved -> {self.logger.get_last_update(self.dqn.__class__.__name__)}")
