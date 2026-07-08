@@ -14,7 +14,7 @@ def categorical_projection(next_probs: torch.Tensor,
                            v_max: float | int) -> torch.Tensor:
     """ Проекция беллмановской цели обратно на фиксированную сетку атомов. """
     batch_size, n_atoms = next_probs.shape
-    delta_z: float = (v_max - v_min) / (n_atoms - 1)  # шаг сетки между соседними атомами
+    delta_z: int | float = (v_max - v_min) / (n_atoms - 1)  # шаг сетки между соседними атомами
     # Приводим всё к [B, 1], чтобы корректно бродкастить по оси атомов [1, N].
     reward = reward.reshape(-1, 1)
     done = done.reshape(-1, 1)
@@ -30,8 +30,8 @@ def categorical_projection(next_probs: torch.Tensor,
     u: torch.Tensor = b.ceil().long()  # верхний сосед-узел
     # Если Tz попал точно в узел (l == u), доли (u-b) и (b-l) обнулятся и масса "исчезнет".
     # Раздвигаем соседей, аккуратно обрабатывая края линейки (0 и N-1).
-    l = torch.where((u > 0) & (l == u), l - 1, l)
-    u = torch.where((l < n_atoms - 1) & (l == u), u + 1, u)
+    l: torch.Tensor = torch.where((u > 0) & (l == u), l - 1, l)
+    u: torch.Tensor = torch.where((l < n_atoms - 1) & (l == u), u + 1, u)
     # --- Шаг 2.4b: "размазываем" массу next_probs между узлами l и u (линейная интерполяция) ---
     weight_l: torch.Tensor = (u.float() - b)  # доля массы, уходящая в НИЖНИЙ узел l
     weight_u: torch.Tensor = (b - l.float())  # доля массы, уходящая в ВЕРХНИЙ узел u
