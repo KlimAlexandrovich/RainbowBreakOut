@@ -101,6 +101,7 @@ class Trainer:
                                    n_steps=cfg.n_steps)
         # ---------------------------------------------
         self.reward_window: RewardDeque = RewardDeque(window_size=100, default=0.0)
+        # TODO: Проверить аргументы для изменения beta.
         self.beta_scheduler: Callable[[int], float | int] = build_linear_scheduler(cfg.beta,
                                                                                    cfg.beta_end,
                                                                                    cfg.total_frames_steps)
